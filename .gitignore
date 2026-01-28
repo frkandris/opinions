@@ -5,3 +5,6 @@ out
 .env
 .env.local
 .DS_Store
+tests/screenshots
+test-results
+playwright-report
