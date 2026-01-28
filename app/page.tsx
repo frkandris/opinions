@@ -182,9 +182,10 @@ export default function Page() {
         throw new Error("Ez a név már foglalt.");
       }
 
+      const isFirstPlayer = !existingPlayers || existingPlayers.length === 0;
       const { data: newPlayer, error: playerErr } = await supabase
         .from("players")
-        .insert({ game_id: game.id, name, is_host: false })
+        .insert({ game_id: game.id, name, is_host: isFirstPlayer })
         .select()
         .single();
 

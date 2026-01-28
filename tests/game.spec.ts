@@ -1,98 +1,104 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Vélemények játék", () => {
-  test("Home screen megjelenik", async ({ page }) => {
+  test("Home screen - csak kód input", async ({ page }) => {
     await page.goto("/");
     
     await expect(page.locator("h1")).toContainText("Vélemények");
-    await expect(page.getByPlaceholder("Neved")).toBeVisible();
-    await expect(page.getByPlaceholder("Kód")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Új játék" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Csatlakozás" })).toBeVisible();
+    await expect(page.getByPlaceholder("KÓD")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Tovább" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Tovább" })).toBeDisabled();
     
     await page.screenshot({ path: "tests/screenshots/01-home.png", fullPage: true });
   });
 
-  test("Név megadása aktiválja az Új játék gombot", async ({ page }) => {
+  test("Kód beírása aktiválja a Tovább gombot", async ({ page }) => {
     await page.goto("/");
     
-    const newGameBtn = page.getByRole("button", { name: "Új játék" });
-    await expect(newGameBtn).toBeDisabled();
+    const nextBtn = page.getByRole("button", { name: "Tovább" });
+    await expect(nextBtn).toBeDisabled();
     
-    await page.getByPlaceholder("Neved").fill("Teszt Játékos");
-    await expect(newGameBtn).toBeEnabled();
+    await page.getByPlaceholder("KÓD").fill("ABCD");
+    await expect(nextBtn).toBeEnabled();
     
-    await page.screenshot({ path: "tests/screenshots/02-home-with-name.png", fullPage: true });
-  });
-
-  test("Csatlakozás gomb csak kóddal és névvel aktív", async ({ page }) => {
-    await page.goto("/");
-    
-    const joinBtn = page.getByRole("button", { name: "Csatlakozás" });
-    await expect(joinBtn).toBeDisabled();
-    
-    await page.getByPlaceholder("Neved").fill("Teszt");
-    await expect(joinBtn).toBeDisabled();
-    
-    await page.getByPlaceholder("Kód").fill("ABCD");
-    await expect(joinBtn).toBeEnabled();
-    
-    await page.screenshot({ path: "tests/screenshots/03-home-ready-to-join.png", fullPage: true });
+    await page.screenshot({ path: "tests/screenshots/02-home-with-code.png", fullPage: true });
   });
 
   test("Hibás kód esetén hibaüzenet jelenik meg", async ({ page }) => {
     await page.goto("/");
     
-    await page.getByPlaceholder("Neved").fill("Teszt");
-    await page.getByPlaceholder("Kód").fill("XXXX");
-    await page.getByRole("button", { name: "Csatlakozás" }).click();
+    await page.getByPlaceholder("KÓD").fill("XXXX");
+    await page.getByRole("button", { name: "Tovább" }).click();
     
-    await expect(page.locator("text=nem található")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=Nincs ilyen kód")).toBeVisible({ timeout: 10000 });
     
-    await page.screenshot({ path: "tests/screenshots/04-error-invalid-code.png", fullPage: true });
+    await page.screenshot({ path: "tests/screenshots/03-error-invalid-code.png", fullPage: true });
   });
 
-  test("Játék létrehozása és lobby megjelenítése", async ({ page }) => {
-    await page.goto("/");
+  test("Admin oldal - szoba létrehozása", async ({ page }) => {
+    await page.goto("/admin");
     
-    await page.getByPlaceholder("Neved").fill("Host Játékos");
-    await page.getByRole("button", { name: "Új játék" }).click();
+    await expect(page.locator("h1")).toContainText("Admin");
+    await expect(page.getByRole("button", { name: "Szoba létrehozása" })).toBeVisible();
     
-    // Várjuk meg a lobby-t
-    await expect(page.locator("text=Kód")).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Szoba létrehozása" }).click();
     
-    // Ellenőrizzük, hogy a játékos neve megjelenik
-    await expect(page.locator("text=Host Játékos")).toBeVisible();
+    // Várjuk meg a kód megjelenését
+    await expect(page.locator("text=Szoba létrehozva")).toBeVisible({ timeout: 10000 });
     
-    // Host korona
-    await expect(page.locator("text=👑")).toBeVisible();
-    
-    // Indítás gomb (disabled, mert egyedül van)
-    const startBtn = page.getByRole("button", { name: "Indítás" });
-    await expect(startBtn).toBeVisible();
-    await expect(startBtn).toBeDisabled();
-    
-    await page.screenshot({ path: "tests/screenshots/05-lobby-single-player.png", fullPage: true });
+    await page.screenshot({ path: "tests/screenshots/04-admin-room-created.png", fullPage: true });
   });
 
-  test("Kilépés gomb visszavisz a főoldalra", async ({ page }) => {
-    await page.goto("/");
+  test("Kilépés gomb visszavisz a főoldalra", async ({ browser }) => {
+    // Admin létrehoz szobát
+    const adminPage = await browser.newPage();
+    await adminPage.goto("/admin");
+    await adminPage.getByRole("button", { name: "Szoba létrehozása" }).click();
+    await expect(adminPage.locator("text=Szoba létrehozva")).toBeVisible({ timeout: 10000 });
     
-    await page.getByPlaceholder("Neved").fill("Kilépő");
-    await page.getByRole("button", { name: "Új játék" }).click();
+    // Kód kinyerése
+    const codeElement = adminPage.locator(".text-violet-400.font-mono");
+    const gameCode = await codeElement.textContent();
     
-    await expect(page.locator("text=Kód")).toBeVisible({ timeout: 10000 });
+    // Játékos csatlakozik
+    const playerPage = await browser.newPage();
+    await playerPage.goto("/");
+    await playerPage.getByPlaceholder("KÓD").fill(gameCode!);
+    await playerPage.getByRole("button", { name: "Tovább" }).click();
+    
+    // Név megadása
+    await expect(playerPage.getByPlaceholder("Neved")).toBeVisible({ timeout: 10000 });
+    await playerPage.getByPlaceholder("Neved").fill("Teszt");
+    await playerPage.getByRole("button", { name: "Csatlakozás" }).click();
+    
+    // Lobby
+    await expect(playerPage.locator("text=Teszt")).toBeVisible({ timeout: 10000 });
     
     // Kilépés gomb (✕)
-    await page.locator("button:has-text('✕')").click();
+    await playerPage.locator("button:has-text('✕')").click();
     
     // Visszakerültünk a főoldalra
-    await expect(page.getByRole("button", { name: "Új játék" })).toBeVisible();
+    await expect(playerPage.getByPlaceholder("KÓD")).toBeVisible();
     
-    await page.screenshot({ path: "tests/screenshots/06-back-to-home.png", fullPage: true });
+    await playerPage.screenshot({ path: "tests/screenshots/05-back-to-home.png", fullPage: true });
+    
+    await adminPage.close();
+    await playerPage.close();
   });
 
   test("Két játékos csatlakozása és játék indítása", async ({ browser }) => {
+    // Admin létrehoz szobát
+    const adminPage = await browser.newPage();
+    await adminPage.goto("/admin");
+    await adminPage.getByRole("button", { name: "Szoba létrehozása" }).click();
+    await expect(adminPage.locator("text=Szoba létrehozva")).toBeVisible({ timeout: 10000 });
+    
+    // Kód kinyerése
+    const codeElement = adminPage.locator(".text-violet-400.font-mono");
+    const gameCode = await codeElement.textContent();
+    
+    await adminPage.screenshot({ path: "tests/screenshots/06-admin-created.png", fullPage: true });
+    
     // Host böngésző
     const hostContext = await browser.newContext();
     const hostPage = await hostContext.newPage();
@@ -101,23 +107,24 @@ test.describe("Vélemények játék", () => {
     const guestContext = await browser.newContext();
     const guestPage = await guestContext.newPage();
     
-    // Host létrehozza a játékot
+    // Host csatlakozik
     await hostPage.goto("/");
+    await hostPage.getByPlaceholder("KÓD").fill(gameCode!);
+    await hostPage.getByRole("button", { name: "Tovább" }).click();
+    await expect(hostPage.getByPlaceholder("Neved")).toBeVisible({ timeout: 10000 });
     await hostPage.getByPlaceholder("Neved").fill("Host");
-    await hostPage.getByRole("button", { name: "Új játék" }).click();
+    await hostPage.getByRole("button", { name: "Csatlakozás" }).click();
     
-    await expect(hostPage.locator("text=Kód")).toBeVisible({ timeout: 10000 });
-    
-    // Kód kinyerése
-    const codeElement = hostPage.locator(".text-violet-400.font-mono");
-    const gameCode = await codeElement.textContent();
+    await expect(hostPage.locator("text=Host")).toBeVisible({ timeout: 10000 });
     
     await hostPage.screenshot({ path: "tests/screenshots/07-host-lobby.png", fullPage: true });
     
     // Guest csatlakozik
     await guestPage.goto("/");
+    await guestPage.getByPlaceholder("KÓD").fill(gameCode!);
+    await guestPage.getByRole("button", { name: "Tovább" }).click();
+    await expect(guestPage.getByPlaceholder("Neved")).toBeVisible({ timeout: 10000 });
     await guestPage.getByPlaceholder("Neved").fill("Guest");
-    await guestPage.getByPlaceholder("Kód").fill(gameCode!);
     await guestPage.getByRole("button", { name: "Csatlakozás" }).click();
     
     await expect(guestPage.locator("text=Host")).toBeVisible({ timeout: 10000 });
@@ -130,7 +137,7 @@ test.describe("Vélemények játék", () => {
     
     await hostPage.screenshot({ path: "tests/screenshots/09-host-sees-guest.png", fullPage: true });
     
-    // Host indítja a játékot
+    // Host (első csatlakozó) indítja a játékot
     const startBtn = hostPage.getByRole("button", { name: "Indítás" });
     await expect(startBtn).toBeEnabled();
     await startBtn.click();
