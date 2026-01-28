@@ -368,11 +368,13 @@ export default function Page() {
               <label>Szerinted ki mondta?</label>
               <select value={guessDraft} onChange={(e) => setGuessDraft(e.target.value)}>
                 <option value="">Válassz játékost…</option>
-                {players.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
+                {players
+                  .filter((p) => p.id !== currentVoter.id)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
               </select>
 
               <div className="row" style={{ justifyContent: "flex-end", marginTop: 12 }}>
