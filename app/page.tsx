@@ -342,386 +342,303 @@ export default function Page() {
   }, [opinions, votes]);
 
   return (
-    <div className="container">
-      <div className="header">
-        <div>
-          <h1 className="h1">Vélemények — party játék</h1>
-          <p className="p">
-            Adj hozzá egy megosztó állítást, majd tippeld meg, ki mondta, és jelöld: egyetértesz vagy nem.
-          </p>
-        </div>
+    <div className="max-w-2xl mx-auto px-4 py-8 min-h-screen">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight">Vélemények</h1>
         {game && (
-          <div className="row">
-            <div className="badge">Kód: {game.code}</div>
-            <button className="btn danger" onClick={resetGame}>
-              Kilépés
+          <div className="flex items-center gap-3">
+            <span className="text-zinc-500 font-mono text-sm">{game.code}</span>
+            <button
+              onClick={resetGame}
+              className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
+            >
+              ✕
             </button>
           </div>
         )}
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="panel" style={{ borderColor: "rgba(239,68,68,0.5)", marginBottom: 16 }}>
-          <div style={{ color: "#ef4444" }}>{error}</div>
-          <button className="btn" onClick={() => setError(null)} style={{ marginTop: 8 }}>
+        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+          <p className="text-red-400 text-sm">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="mt-2 text-xs text-zinc-500 hover:text-zinc-300"
+          >
             Bezárás
           </button>
         </div>
       )}
 
+      {/* Home Screen */}
       {screen === "home" && (
-        <div className="panel">
-          <div className="grid two">
-            <div>
-              <div className="badge">Új játék létrehozása</div>
-              <div className="hr" />
+        <div className="space-y-8">
+          <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
+            <input
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              placeholder="Neved"
+              className="w-full bg-transparent border-b border-white/20 pb-2 text-lg outline-none placeholder:text-zinc-600 focus:border-violet-500 transition-colors"
+            />
+            <button
+              onClick={createGame}
+              disabled={loading || !clampName(playerName)}
+              className="mt-6 w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              Új játék
+            </button>
+          </div>
 
-              <label>A neved</label>
-              <input
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="Pl.: Anna"
-              />
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-zinc-600 text-xs">vagy</span>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
 
-              <div className="hr" />
-              <button
-                className="btn primary"
-                onClick={createGame}
-                disabled={loading || !clampName(playerName)}
-              >
-                {loading ? "Létrehozás..." : "Játék létrehozása"}
-              </button>
-            </div>
-
-            <div>
-              <div className="badge">Csatlakozás meglévő játékhoz</div>
-              <div className="hr" />
-
-              <label>A neved</label>
-              <input
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="Pl.: Anna"
-              />
-
-              <label style={{ marginTop: 12 }}>Játék kódja</label>
-              <input
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                placeholder="Pl.: ABC123"
-                maxLength={6}
-              />
-
-              <div className="hr" />
-              <button
-                className="btn primary"
-                onClick={joinGame}
-                disabled={loading || !clampName(playerName) || joinCode.length < 4}
-              >
-                {loading ? "Csatlakozás..." : "Csatlakozás"}
-              </button>
-            </div>
+          <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
+            <input
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+              placeholder="Kód"
+              maxLength={6}
+              className="w-full bg-transparent border-b border-white/20 pb-2 text-lg font-mono tracking-widest outline-none placeholder:text-zinc-600 focus:border-violet-500 transition-colors text-center"
+            />
+            <button
+              onClick={joinGame}
+              disabled={loading || !clampName(playerName) || joinCode.length < 4}
+              className="mt-6 w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              Csatlakozás
+            </button>
           </div>
         </div>
       )}
 
+      {/* Lobby */}
       {screen === "lobby" && game?.phase === "lobby" && (
-        <div className="panel">
-          <div className="grid two">
-            <div>
-              <div className="badge">Váróterem</div>
-              <div className="hr" />
-
-              <div style={{ fontWeight: 750, fontSize: 18, marginBottom: 8 }}>
-                Játék kódja: <span style={{ color: "#7c3aed" }}>{game.code}</span>
-              </div>
-              <div className="small">Oszd meg ezt a kódot a többi játékossal!</div>
-
-              <div className="hr" />
-              {isHost && (
-                <button
-                  className="btn primary"
-                  onClick={startOpinionsPhase}
-                  disabled={players.length < 2}
-                >
-                  Játék indítása ({players.length} játékos)
-                </button>
-              )}
-              {!isHost && (
-                <div className="small">Várakozás a házigazdára, hogy elindítsa a játékot...</div>
-              )}
-            </div>
-
-            <div>
-              <div className="badge">Játékosok: {players.length}</div>
-              <div className="hr" />
-              <div className="grid">
-                {sortedPlayers.map((p) => (
-                  <div key={p.id} className="panel" style={{ padding: 12 }}>
-                    <div className="row" style={{ justifyContent: "space-between" }}>
-                      <div style={{ fontWeight: 750 }}>
-                        {p.name} {p.id === myPlayerId && "(te)"} {p.is_host && "👑"}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="space-y-6">
+          <div className="text-center">
+            <p className="text-zinc-500 text-sm mb-2">Kód</p>
+            <p className="text-4xl font-mono font-bold tracking-widest text-violet-400">{game.code}</p>
           </div>
+
+          <div className="space-y-2">
+            {sortedPlayers.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
+              >
+                <span className="font-medium">
+                  {p.name}
+                  {p.id === myPlayerId && <span className="text-zinc-500 ml-2">te</span>}
+                </span>
+                {p.is_host && <span className="text-amber-400">👑</span>}
+              </div>
+            ))}
+          </div>
+
+          {isHost ? (
+            <button
+              onClick={startOpinionsPhase}
+              disabled={players.length < 2}
+              className="w-full py-4 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              Indítás
+            </button>
+          ) : (
+            <p className="text-center text-zinc-500 text-sm">Várakozás...</p>
+          )}
         </div>
       )}
 
+      {/* Opinions Phase */}
       {game?.phase === "opinions" && (
-        <div className="panel">
-          <div className="badge">2. lépés — Állítások</div>
-          <div className="hr" />
-
-          <div className="grid two">
-            <div>
-              {!myOpinion ? (
-                <>
-                  <div style={{ fontWeight: 750, marginBottom: 6 }}>
-                    Írj egy megosztó állítást!
-                  </div>
-                  <div className="small">Tipp: legyen rövid, de provokatív. (Max 220 karakter.)</div>
-                  <div className="hr" />
-
-                  <label>Állítás</label>
-                  <textarea
-                    value={opinionDraft}
-                    onChange={(e) => setOpinionDraft(e.target.value)}
-                    placeholder="Pl.: A pizza ananásszal teljesen rendben van."
-                  />
-
-                  <div className="row" style={{ justifyContent: "flex-end", marginTop: 10 }}>
-                    <button
-                      className="btn primary"
-                      onClick={submitOpinion}
-                      disabled={loading || !clampOpinion(opinionDraft)}
-                    >
-                      {loading ? "Küldés..." : "Beküldés"}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{ fontWeight: 750, marginBottom: 6 }}>
-                    ✓ Beküldted az állításodat!
-                  </div>
-                  <div className="panel" style={{ padding: 12, whiteSpace: "pre-wrap" }}>
-                    {myOpinion.text}
-                  </div>
-                  <div className="hr" />
-                  <div className="small">Várakozás a többi játékosra...</div>
-                </>
-              )}
-            </div>
-
-            <div>
-              <div className="badge">Haladás: {opinions.length}/{players.length}</div>
-              <div className="hr" />
-              <div className="grid">
-                {sortedPlayers.map((p) => {
-                  const hasOpinion = opinions.some((o) => o.player_id === p.id);
-                  return (
-                    <div key={p.id} className="panel" style={{ padding: 12 }}>
-                      <div className="row" style={{ justifyContent: "space-between" }}>
-                        <div style={{ fontWeight: 750 }}>
-                          {p.name} {p.id === myPlayerId && "(te)"}
-                        </div>
-                        <div className="badge">{hasOpinion ? "✓ Kész" : "⏳ Vár"}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {isHost && allPlayersSubmittedOpinions && (
-                <>
-                  <div className="hr" />
-                  <button className="btn primary" onClick={startPlayPhase}>
-                    Tovább a szavazásra
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {game?.phase === "play" && currentOpinion && (
-        <div className="panel">
-          <div className="row" style={{ justifyContent: "space-between" }}>
-            <div className="badge">3. lépés — Szavazás</div>
-            <div className="badge">
-              Állítás: {(game.current_opinion_index ?? 0) + 1}/{sortedOpinions.length}
-            </div>
-          </div>
-          <div className="hr" />
-
-          <div className="grid two">
-            <div>
-              <div className="small">Állítás:</div>
-              <div className="panel" style={{ padding: 12, whiteSpace: "pre-wrap", fontSize: 18 }}>
-                {currentOpinion.text}
-              </div>
-
-              {!myVoteForCurrentOpinion ? (
-                <>
-                  <div className="hr" />
-                  <div className="small">Te mit gondolsz?</div>
-                  <div className="row" style={{ marginTop: 8 }}>
-                    <button
-                      className="btn"
-                      onClick={() => setAgreeDraft(true)}
-                      style={{ borderColor: agreeDraft === true ? "rgba(34,197,94,0.8)" : undefined }}
-                    >
-                      Egyetértek
-                    </button>
-                    <button
-                      className="btn"
-                      onClick={() => setAgreeDraft(false)}
-                      style={{ borderColor: agreeDraft === false ? "rgba(239,68,68,0.8)" : undefined }}
-                    >
-                      Nem értek egyet
-                    </button>
-                  </div>
-
-                  <div className="hr" />
-                  <label>Szerinted ki mondta?</label>
-                  <select value={guessDraft} onChange={(e) => setGuessDraft(e.target.value)}>
-                    <option value="">Válassz játékost…</option>
-                    {sortedPlayers
-                      .filter((p) => p.id !== myPlayerId)
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                  </select>
-
-                  <div className="row" style={{ justifyContent: "flex-end", marginTop: 12 }}>
-                    <button
-                      className="btn primary"
-                      onClick={submitVote}
-                      disabled={loading || agreeDraft === null || !guessDraft}
-                    >
-                      {loading ? "Küldés..." : "Szavazok"}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="hr" />
-                  <div style={{ fontWeight: 750 }}>✓ Szavaztál erre az állításra!</div>
-                  <div className="small">Várakozás a többi játékosra...</div>
-                </>
-              )}
-            </div>
-
-            <div>
-              <div style={{ fontWeight: 750, marginBottom: 6 }}>Ki szavazott már?</div>
-              <div className="hr" />
-              <div className="grid">
-                {sortedPlayers.map((p) => {
-                  const hasVoted = votes.some(
-                    (v) => v.opinion_id === currentOpinion.id && v.voter_player_id === p.id
-                  );
-                  return (
-                    <div key={p.id} className="panel" style={{ padding: 12 }}>
-                      <div className="row" style={{ justifyContent: "space-between" }}>
-                        <div style={{ fontWeight: 750 }}>
-                          {p.name} {p.id === myPlayerId && "(te)"}
-                        </div>
-                        <div className="badge">{hasVoted ? "✓ Szavazott" : "⏳ Vár"}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="hr" />
-              <div className="kpi">
-                <div className="small">Összesen szavazatok</div>
-                <div className="v">{completedTurns}/{totalTurns}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {game?.phase === "results" && (
-        <div className="panel">
-          <div className="badge">4. lépés — Eredmények</div>
-          <div className="hr" />
-
-          <div className="grid two">
-            <div>
-              <div style={{ fontWeight: 750, marginBottom: 6 }}>Pontok (tippelés)</div>
-              <div className="small">Minden helyes "ki mondta?" tipp +1 pont.</div>
-              <div className="hr" />
-              <div className="grid">
-                {players
-                  .map((p) => ({
-                    player: p,
-                    score: scores[p.id]?.correctGuesses ?? 0,
-                    total: scores[p.id]?.totalGuesses ?? 0,
-                  }))
-                  .sort((a, b) => b.score - a.score)
-                  .map(({ player, score, total }, idx) => (
-                    <div key={player.id} className="panel" style={{ padding: 12 }}>
-                      <div className="row" style={{ justifyContent: "space-between" }}>
-                        <div style={{ fontWeight: 800 }}>
-                          {idx === 0 && "🏆 "}{player.name} {player.id === myPlayerId && "(te)"}
-                        </div>
-                        <div className="badge">
-                          {score}/{total}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-
-              <div className="hr" />
-              <button className="btn primary" onClick={resetGame}>
-                Új játék
+        <div className="space-y-6">
+          {!myOpinion ? (
+            <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
+              <textarea
+                value={opinionDraft}
+                onChange={(e) => setOpinionDraft(e.target.value)}
+                placeholder="Írd ide a véleményed..."
+                className="w-full bg-transparent resize-none h-32 outline-none placeholder:text-zinc-600 text-lg"
+              />
+              <button
+                onClick={submitOpinion}
+                disabled={loading || !clampOpinion(opinionDraft)}
+                className="mt-4 w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors"
+              >
+                Küldés
               </button>
             </div>
-
-            <div>
-              <div style={{ fontWeight: 750, marginBottom: 6 }}>Állítások összesítve</div>
-              <div className="small">Itt már látszik, ki írta és mennyien értettek egyet.</div>
-              <div className="hr" />
-
-              <div className="grid">
-                {sortedOpinions.map((o, idx) => {
-                  const author = players.find((p) => p.id === o.player_id);
-                  const s = opinionStats[o.id] ?? { agree: 0, disagree: 0 };
-                  return (
-                    <div key={o.id} className="panel" style={{ padding: 12 }}>
-                      <div className="row" style={{ justifyContent: "space-between" }}>
-                        <div className="badge">#{idx + 1}</div>
-                        <div className="badge">Szerző: {author?.name ?? "?"}</div>
-                      </div>
-                      <div style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{o.text}</div>
-                      <div className="hr" />
-                      <div className="row">
-                        <div className="badge">Egyetért: {s.agree}</div>
-                        <div className="badge">Nem ért egyet: {s.disagree}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          ) : (
+            <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+              <p className="text-emerald-400 text-sm mb-2">✓ Elküldve</p>
+              <p className="text-zinc-300">{myOpinion.text}</p>
             </div>
+          )}
+
+          <div className="flex items-center gap-2 justify-center">
+            {sortedPlayers.map((p) => {
+              const done = opinions.some((o) => o.player_id === p.id);
+              return (
+                <div
+                  key={p.id}
+                  className={`w-3 h-3 rounded-full transition-colors ${done ? "bg-emerald-500" : "bg-zinc-700"}`}
+                  title={p.name}
+                />
+              );
+            })}
+          </div>
+
+          {isHost && allPlayersSubmittedOpinions && (
+            <button
+              onClick={startPlayPhase}
+              className="w-full py-4 rounded-xl bg-violet-600 hover:bg-violet-500 font-medium transition-colors"
+            >
+              Tovább
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Play Phase */}
+      {game?.phase === "play" && currentOpinion && (
+        <div className="space-y-6">
+          <div className="text-center">
+            <p className="text-zinc-500 text-xs mb-4">
+              {(game.current_opinion_index ?? 0) + 1} / {sortedOpinions.length}
+            </p>
+            <p className="text-xl font-medium leading-relaxed">„{currentOpinion.text}"</p>
+          </div>
+
+          {!myVoteForCurrentOpinion ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setAgreeDraft(true)}
+                  className={`py-4 rounded-xl font-medium transition-all ${
+                    agreeDraft === true
+                      ? "bg-emerald-500 text-white"
+                      : "bg-white/5 border border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  Igen
+                </button>
+                <button
+                  onClick={() => setAgreeDraft(false)}
+                  className={`py-4 rounded-xl font-medium transition-all ${
+                    agreeDraft === false
+                      ? "bg-red-500 text-white"
+                      : "bg-white/5 border border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  Nem
+                </button>
+              </div>
+
+              <select
+                value={guessDraft}
+                onChange={(e) => setGuessDraft(e.target.value)}
+                className="w-full p-4 rounded-xl bg-white/5 border border-white/10 outline-none appearance-none cursor-pointer"
+              >
+                <option value="" className="bg-zinc-900">Ki mondta?</option>
+                {sortedPlayers
+                  .filter((p) => p.id !== myPlayerId)
+                  .map((p) => (
+                    <option key={p.id} value={p.id} className="bg-zinc-900">
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+
+              <button
+                onClick={submitVote}
+                disabled={loading || agreeDraft === null || !guessDraft}
+                className="w-full py-4 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors"
+              >
+                Küldés
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-emerald-400">✓ Szavaztál</p>
+              <p className="text-zinc-500 text-sm mt-2">Várakozás...</p>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 justify-center">
+            {sortedPlayers.map((p) => {
+              const done = votes.some(
+                (v) => v.opinion_id === currentOpinion.id && v.voter_player_id === p.id
+              );
+              return (
+                <div
+                  key={p.id}
+                  className={`w-3 h-3 rounded-full transition-colors ${done ? "bg-emerald-500" : "bg-zinc-700"}`}
+                  title={p.name}
+                />
+              );
+            })}
           </div>
         </div>
       )}
 
-      <div style={{ height: 18 }} />
-      <div className="small">
-        Többjátékos mód — minden játékos a saját böngészőjéből játszik.
-      </div>
+      {/* Results */}
+      {game?.phase === "results" && (
+        <div className="space-y-8">
+          <div className="space-y-2">
+            {players
+              .map((p) => ({
+                player: p,
+                score: scores[p.id]?.correctGuesses ?? 0,
+              }))
+              .sort((a, b) => b.score - a.score)
+              .map(({ player, score }, idx) => (
+                <div
+                  key={player.id}
+                  className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
+                >
+                  <span className="font-medium">
+                    {idx === 0 && "🏆 "}
+                    {player.name}
+                    {player.id === myPlayerId && <span className="text-zinc-500 ml-2">te</span>}
+                  </span>
+                  <span className="text-violet-400 font-mono">{score}</span>
+                </div>
+              ))}
+          </div>
+
+          <div className="h-px bg-white/10" />
+
+          <div className="space-y-3">
+            {sortedOpinions.map((o) => {
+              const author = players.find((p) => p.id === o.player_id);
+              const s = opinionStats[o.id] ?? { agree: 0, disagree: 0 };
+              return (
+                <div key={o.id} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-zinc-300 mb-3">„{o.text}"</p>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500">{author?.name}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-emerald-400">{s.agree}↑</span>
+                      <span className="text-red-400">{s.disagree}↓</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={resetGame}
+            className="w-full py-4 rounded-xl bg-violet-600 hover:bg-violet-500 font-medium transition-colors"
+          >
+            Új játék
+          </button>
+        </div>
+      )}
     </div>
   );
 }
