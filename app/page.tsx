@@ -36,11 +36,7 @@ type Vote = {
   guessed_author_id: string;
 };
 
-type Screen = "home" | "lobby" | "game";
-
-function generateCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
+type Screen = "home" | "name" | "lobby" | "game";
 
 function clampName(name: string) {
   return name.trim().slice(0, 24);
@@ -140,46 +136,9 @@ export default function Page() {
     return unsub;
   }, [game?.id, subscribeToGame]);
 
-  async function createGame() {
-    const name = clampName(playerName);
-    if (!name) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const code = generateCode();
-      const { data: newGame, error: gameErr } = await supabase
-        .from("games")
-        .insert({ code, phase: "lobby" })
-        .select()
-        .single();
-
-      if (gameErr) throw gameErr;
-
-      const { data: newPlayer, error: playerErr } = await supabase
-        .from("players")
-        .insert({ game_id: newGame.id, name, is_host: true })
-        .select()
-        .single();
-
-      if (playerErr) throw playerErr;
-
-      setGame(newGame);
-      setPlayers([newPlayer]);
-      setMyPlayerId(newPlayer.id);
-      setScreen("lobby");
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function joinGame() {
-    const name = clampName(playerName);
+  async function checkCode() {
     const code = joinCode.trim().toUpperCase();
-    if (!name || !code) return;
+    if (code.length < 4) return;
 
     setLoading(true);
     setError(null);
@@ -191,34 +150,50 @@ export default function Page() {
         .eq("code", code)
         .single();
 
-      if (findErr || !existingGame) throw new Error("Játék nem található ezzel a kóddal.");
+      if (findErr || !existingGame) throw new Error("Nincs ilyen kód.");
 
       if (existingGame.phase !== "lobby") {
-        throw new Error("Ez a játék már elkezdődött, nem lehet csatlakozni.");
+        throw new Error("A játék már elkezdődött.");
       }
 
+      setGame(existingGame);
+      setScreen("name");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function joinGame() {
+    const name = clampName(playerName);
+    if (!name || !game) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
       const { data: existingPlayers } = await supabase
         .from("players")
         .select()
-        .eq("game_id", existingGame.id);
+        .eq("game_id", game.id);
 
       if (existingPlayers?.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
-        throw new Error("Már van ilyen nevű játékos ebben a játékban.");
+        throw new Error("Ez a név már foglalt.");
       }
 
       const { data: newPlayer, error: playerErr } = await supabase
         .from("players")
-        .insert({ game_id: existingGame.id, name, is_host: false })
+        .insert({ game_id: game.id, name, is_host: false })
         .select()
         .single();
 
       if (playerErr) throw playerErr;
 
-      const { data: allPlayers } = await supabase.from("players").select().eq("game_id", existingGame.id);
-      const { data: allOpinions } = await supabase.from("opinions").select().eq("game_id", existingGame.id);
-      const { data: allVotes } = await supabase.from("votes").select().eq("game_id", existingGame.id);
+      const { data: allPlayers } = await supabase.from("players").select().eq("game_id", game.id);
+      const { data: allOpinions } = await supabase.from("opinions").select().eq("game_id", game.id);
+      const { data: allVotes } = await supabase.from("votes").select().eq("game_id", game.id);
 
-      setGame(existingGame);
       setPlayers(allPlayers ?? []);
       setOpinions(allOpinions ?? []);
       setVotes(allVotes ?? []);
@@ -372,45 +347,52 @@ export default function Page() {
         </div>
       )}
 
-      {/* Home Screen */}
+      {/* Home Screen - csak kód beírás */}
       {screen === "home" && (
-        <div className="space-y-8">
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="w-full max-w-xs space-y-6">
+            <input
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+              placeholder="KÓD"
+              maxLength={4}
+              className="w-full bg-transparent border-b-2 border-white/20 pb-3 text-4xl font-mono tracking-[0.3em] outline-none placeholder:text-zinc-700 focus:border-violet-500 transition-colors text-center uppercase"
+            />
+            <button
+              onClick={checkCode}
+              disabled={loading || joinCode.length < 4}
+              className="w-full py-4 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              {loading ? "..." : "Tovább"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Name Screen - név megadása csatlakozás előtt */}
+      {screen === "name" && game && (
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="w-full max-w-xs space-y-6">
+            <p className="text-center text-zinc-500 font-mono tracking-widest">{game.code}</p>
             <input
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               placeholder="Neved"
-              className="w-full bg-transparent border-b border-white/20 pb-2 text-lg outline-none placeholder:text-zinc-600 focus:border-violet-500 transition-colors"
-            />
-            <button
-              onClick={createGame}
-              disabled={loading || !clampName(playerName)}
-              className="mt-6 w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors"
-            >
-              Új játék
-            </button>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-zinc-600 text-xs">vagy</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
-
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-            <input
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="Kód"
-              maxLength={6}
-              className="w-full bg-transparent border-b border-white/20 pb-2 text-lg font-mono tracking-widest outline-none placeholder:text-zinc-600 focus:border-violet-500 transition-colors text-center"
+              className="w-full bg-transparent border-b-2 border-white/20 pb-3 text-2xl outline-none placeholder:text-zinc-700 focus:border-violet-500 transition-colors text-center"
+              autoFocus
             />
             <button
               onClick={joinGame}
-              disabled={loading || !clampName(playerName) || joinCode.length < 4}
-              className="mt-6 w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors"
+              disabled={loading || !clampName(playerName)}
+              className="w-full py-4 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors"
             >
-              Csatlakozás
+              {loading ? "..." : "Csatlakozás"}
+            </button>
+            <button
+              onClick={() => { setScreen("home"); setGame(null); setError(null); }}
+              className="w-full text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
+            >
+              Vissza
             </button>
           </div>
         </div>
